@@ -72,6 +72,13 @@ const CHARACTER_FILES = new Set(['boy.png', 'girl.png']);
 const MAIN_FILES = new Set(['Main.png']);
 
 async function syncItems() {
+  // 원본 폴더는 용량이 커서 저장소(배포 환경)에는 올리지 않는다(.gitignore 참고).
+  // Vercel 등에서는 이 폴더가 아예 없으므로, 없으면 건드리지 않고 이미 커밋된
+  // public/assets의 결과물을 그대로 쓴다(아래 정리 단계도 이때는 건너뛴다).
+  if (!fs.existsSync(itemSourceDir)) {
+    console.log(`[아이템 이미지] 원본 폴더 없음(${path.basename(itemSourceDir)}) - 배포 환경으로 보고 건너뜀, 기존 public/assets 결과물 유지`);
+    return null;
+  }
   const itemFiles = fs.readdirSync(itemSourceDir).filter((f) => IMAGE_EXT.test(f));
   const itemManifest = [];
   let skipped = 0;
@@ -108,9 +115,14 @@ const SCENE1_SOLO_PATTERN = /^scene1_(cardigan|padding)_(boy|girl)\.png$/i;
 const SCENE1_COMBO_PATTERN = /^scene2_(cardigan|padding|none)_([ABC])_(boy|girl)\.png$/i;
 
 async function syncOutfits() {
-  const outfitFiles = fs.existsSync(outfitSourceDir)
-    ? fs.readdirSync(outfitSourceDir).filter((f) => IMAGE_EXT.test(f))
-    : [];
+  // 원본 폴더는 용량이 커서 저장소(배포 환경)에는 올리지 않는다(.gitignore 참고).
+  // Vercel 등에서는 이 폴더가 아예 없으므로, 없으면 건드리지 않고 이미 커밋된
+  // public/assets/outfits 결과물을 그대로 쓴다(아래 정리·검증 단계도 건너뛴다).
+  if (!fs.existsSync(outfitSourceDir)) {
+    console.log(`[코디 결과 이미지] 원본 폴더 없음(${path.basename(outfitSourceDir)}) - 배포 환경으로 보고 건너뜀, 기존 public/assets 결과물 유지`);
+    return null;
+  }
+  const outfitFiles = fs.readdirSync(outfitSourceDir).filter((f) => IMAGE_EXT.test(f));
 
   const outfitManifest = [];
   const declutterManifest = [];
@@ -190,24 +202,38 @@ function cleanupDir(dir, ownPattern, expectedRelNames) {
 
 async function run() {
   const itemManifest = await syncItems();
-  const { outfitManifest, declutterManifest, noOuterManifest, scene1SoloManifest, scene1ComboManifest } =
-    await syncOutfits();
+  const outfitsResult = await syncOutfits();
 
   saveManifest(manifestPath, nextManifest);
 
-  const expectedItemRel = new Set(itemManifest.map((m) => path.posix.join(m.category, m.outName)));
-  const removedItems = [
-    ...cleanupDir(path.join(targetRoot, 'items'), OWN_ITEM_BASE_PATTERN, expectedItemRel),
-    ...cleanupDir(path.join(targetRoot, 'characters'), OWN_ITEM_BASE_PATTERN, expectedItemRel),
-    ...cleanupDir(path.join(targetRoot, 'main'), OWN_ITEM_BASE_PATTERN, expectedItemRel),
-  ];
-  const expectedOutfitRel = new Set(Object.keys(nextManifest).filter((k) => k.startsWith('outfits/')));
-  const removedOutfits = cleanupDir(path.join(targetRoot, 'outfits'), OWN_OUTFIT_BASE_PATTERN, expectedOutfitRel);
+  // 원본 폴더가 없어(배포 환경) 이번 실행에서 건너뛴 쪽은, 무엇이 "지금 필요한
+  // 파일"인지 알 방법이 없으므로 정리(삭제)도 건너뛴다 - 이미 커밋된
+  // public/assets 결과물을 그대로 신뢰하고 둔다.
+  const removedItems = [];
+  if (itemManifest) {
+    const expectedItemRel = new Set(itemManifest.map((m) => path.posix.join(m.category, m.outName)));
+    removedItems.push(
+      ...cleanupDir(path.join(targetRoot, 'items'), OWN_ITEM_BASE_PATTERN, expectedItemRel),
+      ...cleanupDir(path.join(targetRoot, 'characters'), OWN_ITEM_BASE_PATTERN, expectedItemRel),
+      ...cleanupDir(path.join(targetRoot, 'main'), OWN_ITEM_BASE_PATTERN, expectedItemRel)
+    );
+  }
+  const removedOutfits = [];
+  if (outfitsResult) {
+    const expectedOutfitRel = new Set(Object.keys(nextManifest).filter((k) => k.startsWith('outfits/')));
+    removedOutfits.push(...cleanupDir(path.join(targetRoot, 'outfits'), OWN_OUTFIT_BASE_PATTERN, expectedOutfitRel));
+  }
 
   if (removedItems.length + removedOutfits.length > 0) {
     console.log(`\n[정리] 더 이상 쓰이지 않는 배포용 파일 ${removedItems.length + removedOutfits.length}개 삭제:`);
     [...removedItems, ...removedOutfits].forEach((f) => console.log(`    - ${f}`));
   }
+
+  if (!outfitsResult) {
+    console.log('\n[코디 결과 이미지] 원본이 없어 이번 실행에서는 검증을 건너뜀(배포 환경, 커밋된 결과물 사용).');
+    return;
+  }
+  const { outfitManifest, declutterManifest, noOuterManifest, scene1SoloManifest, scene1ComboManifest } = outfitsResult;
 
   // 27개 코드(01~09 x A/B/C) x 남/여 = 54장이 모두 있는지 검증
   const CODES = Array.from({ length: 9 }, (_, i) => String(i + 1).padStart(2, '0'));
