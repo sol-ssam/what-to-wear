@@ -1,0 +1,29 @@
+{
+  "name": "oneul-mwo-ipji",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "sync-assets": "node scripts/sync-assets.mjs",
+    "generate-tee-colors": "node scripts/generate-tee-colors.mjs",
+    "predev": "npm run sync-assets && npm run generate-tee-colors",
+    "prebuild": "npm run sync-assets && npm run generate-tee-colors",
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxlint": "^1.81.0",
+    "pngjs": "^7.0.0",
+    "sharp": "^0.35.5",
+    "vite": "^8.3.0"
+  }
+}

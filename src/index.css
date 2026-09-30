@@ -1,0 +1,41 @@
+:root {
+  --bg: #f6f3ec;
+  --surface: #ffffff;
+  --text: #3d3a45;
+  --text-soft: #746f7d;
+  --accent: #4a90c2;
+  --accent-dark: #386e97;
+  --accent-soft: #e7f0f7;
+  --border: #e2ded4;
+  --shadow: 0 6px 16px rgba(61, 58, 69, 0.08);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  justify-content: center;
+}
+
+button {
+  font-family: inherit;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
